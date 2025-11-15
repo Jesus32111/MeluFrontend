@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-background text-text antialiased;
+}
+
+/* Custom background image */
+.bg-streaming-background {
+    background-image: url('/fondo.jpg');
+}
+
+/* Neon border effect */
+.neon-border {
+  border: 2px solid theme('colors.primary'); /* Borde base */
+  box-shadow:
+    0 0 5px theme('colors.primary'), /* Brillo interior sutil */
+    0 0 15px theme('colors.accent'); /* Brillo exterior sutil */
+  transition: all 0.3s ease-in-out; /* Transición suave para el hover */
+}
+
+.neon-border:hover {
+  box-shadow:
+    0 0 5px theme('colors.primary'),
+    0 0 12px theme('colors.primary'),
+    0 0 20px theme('colors.accent'),
+    0 0 30px theme('colors.accent');
+}
+
+/* Keyframe animations are now defined in tailwind.config.js */
+/* The classes animate-fadeIn, animate-slideInLeft, animate-slideInRight will use those definitions */
