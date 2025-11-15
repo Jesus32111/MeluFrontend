@@ -205,13 +205,17 @@ const ProfileDetails = ({ userData, isLoading }: { userData: UserProfileData, is
 };
 
 // Sección: Mi Cartera (Ahora con estado real y persistencia)
-const WalletSection = ({ userData, initialTransactions }: { userData: UserProfileData, initialTransactions: Transaction[] }) => {
+interface WalletSectionProps {
+  userData: UserProfileData;
+  initialTransactions: Transaction[];
+  onTransactionUpdate: () => void; // 🔄 Prop para refrescar
+}
+
+const WalletSection = ({ userData, initialTransactions, onTransactionUpdate }: WalletSectionProps) => {
     const [isModalOpen, setIsModalOpen] = useState(false); 
-    // Inicializar el historial con los datos cargados de la DB
     const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
     const [userId, setUserId] = useState<string | null>(null);
 
-    // Obtener el ID del usuario al montar el componente
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -224,7 +228,6 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
         }
     }, []);
 
-    // Sincronizar el estado local si las props iniciales cambian (ej: al cambiar de pestaña)
     useEffect(() => {
         setTransactions(initialTransactions);
     }, [initialTransactions]);
@@ -242,10 +245,10 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
     };
 
     // Lógica para generar una nueva transacción pendiente y GUARDAR EN DB
-    const handleRechargeConfirm = async (amount: number) => {
+    const handleRechargeConfirm = async (amount: number): Promise<number> => {
         if (!userId) {
             alert("Error: ID de usuario no encontrado.");
-            return;
+            return 0;
         }
 
         const newTransaction: Transaction = {
@@ -269,13 +272,15 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                 throw new Error('Failed to record transaction');
             }
             
-            // 2. Actualizar el estado local para visualización inmediata
-            setTransactions(prev => [newTransaction, ...prev]);
-            console.log(`Recarga registrada y guardada en DB: $${amount.toFixed(2)}`);
+            // 2. Refrescar datos y devolver el ID
+            onTransactionUpdate();
+            console.log(`Recarga registrada. Refrescando datos...`);
+            return newTransaction.id;
 
         } catch (error) {
             console.error("Error saving transaction:", error);
             alert(`Error al guardar la transacción: ${error.message}`);
+            return 0; // Devolver 0 en caso de error
         }
     };
     
@@ -296,15 +301,9 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                 throw new Error(errorData.message || 'Failed to cancel transaction');
             }
 
-            // 2. Actualizar el estado local
-            setTransactions(prev => 
-                prev.map(tx => 
-                    tx.id === id && tx.status === 'Pendiente' 
-                        ? { ...tx, status: 'Cancelada' } 
-                        : tx
-                )
-            );
-            console.log(`Transacción ${id} cancelada y actualizada en DB.`);
+            // 2. Refrescar todos los datos del perfil desde la DB
+            onTransactionUpdate();
+            console.log(`Transacción ${id} cancelada. Refrescando datos...`);
 
         } catch (error) {
             console.error("Error canceling transaction:", error);
@@ -397,6 +396,7 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onConfirm={handleRechargeConfirm}
+                onCancelTransaction={handleCancelTransaction}
             />
         </div>
     );
@@ -409,64 +409,68 @@ export const ProfilePage = () => {
   const [userData, setUserData] = useState<UserProfileData>(initialUserData);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-            console.error("User not logged in. Cannot fetch profile.");
-            setIsLoading(false);
-            return;
+  const fetchProfile = async () => {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+        console.error("User not logged in. Cannot fetch profile.");
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+        setIsLoading(true); // Mostrar spinner durante la recarga
+        const user = JSON.parse(storedUser);
+        const userId = user.id;
+
+        const response = await fetch(`${API_URL}/profile/${userId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch profile data');
         }
+        const data = await response.json();
 
-        try {
-            const user = JSON.parse(storedUser);
-            const userId = user.id;
+        setUserData({
+            name: data.username,
+            email: data.email,
+            phone: data.phone || 'No especificado',
+            registrationDate: data.registrationDate,
+            role: data.role,
+            balance: data.balance,
+            status: data.status,
+            profileImageUrl: data.profileImageUrl,
+            referralCode: data.referralCode,
+            transactionsHistory: data.transactionsHistory,
+        });
+    } catch (error) {
+        console.error("Error fetching profile:", error);
+        setUserData(prev => ({ ...prev, name: 'Error de Conexión', status: 'Inactiva', role: 'Desconocido', referralCode: 'ERROR', transactionsHistory: [] }));
+    } finally {
+        setIsLoading(false);
+    }
+};
 
-            const response = await fetch(`${API_URL}/profile/${userId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch profile data');
-            }
-            const data = await response.json();
-            
-            setUserData({
-                name: data.username,
-                email: data.email,
-                phone: data.phone || 'No especificado',
-                registrationDate: data.registrationDate,
-                role: data.role,
-                balance: data.balance,
-                status: data.status,
-                profileImageUrl: data.profileImageUrl,
-                referralCode: data.referralCode, 
-                transactionsHistory: data.transactionsHistory, // 🔑 Cargando el historial
-            });
-        } catch (error) {
-            console.error("Error fetching profile:", error);
-            setUserData(prev => ({ ...prev, name: 'Error de Conexión', status: 'Inactiva', role: 'Desconocido', referralCode: 'ERROR', transactionsHistory: [] }));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+useEffect(() => {
     fetchProfile();
-  }, []);
+}, []);
 
 
-  const renderContent = () => {
+const renderContent = () => {
     if (isLoading) {
         return <LoadingSpinner />;
     }
     
     switch (activeTab) {
-      case 'profile':
-        return <ProfileDetails userData={userData} isLoading={false} />; 
-      case 'wallet':
-        // Pasamos el historial cargado de la DB como prop inicial
-        return <WalletSection userData={userData} initialTransactions={userData.transactionsHistory} />;
-      default:
-        return <ProfileDetails userData={userData} isLoading={false} />;
+        case 'profile':
+            return <ProfileDetails userData={userData} isLoading={false} />;
+        case 'wallet':
+            return <WalletSection
+                userData={userData}
+                initialTransactions={userData.transactionsHistory}
+                onTransactionUpdate={fetchProfile} // 🔄 Pasamos la función de refresco
+            />;
+        default:
+            return <ProfileDetails userData={userData} isLoading={false} />;
     }
-  };
+};
 
   const NavItem = ({ tab, icon: Icon, label }: { tab: 'profile' | 'wallet', icon: React.ElementType, label: string }) => {
     const isActive = activeTab === tab;
