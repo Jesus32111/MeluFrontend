@@ -205,8 +205,8 @@ const ProfileDetails = ({ userData, isLoading }: { userData: UserProfileData, is
 };
 
 // Sección: Mi Cartera (Ahora con estado real y persistencia)
-const WalletSection = ({ userData, initialTransactions }: { userData: UserProfileData, initialTransactions: Transaction[] }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false); 
+const WalletSection = ({ userData, initialTransactions, refetch }: { userData: UserProfileData, initialTransactions: Transaction[], refetch: () => void }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
     // Inicializar el historial con los datos cargados de la DB
     const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
     const [userId, setUserId] = useState<string | null>(null);
@@ -297,15 +297,15 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
             }
 
             // 2. Actualizar el estado local
-            setTransactions(prev => 
-                prev.map(tx => 
-                    tx.id === id && tx.status === 'Pendiente' 
-                        ? { ...tx, status: 'Cancelada' } 
+            setTransactions(prev =>
+                prev.map(tx =>
+                    tx.id === id && tx.status === 'Pendiente'
+                        ? { ...tx, status: 'Cancelada' }
                         : tx
                 )
             );
             console.log(`Transacción ${id} cancelada y actualizada en DB.`);
-
+            refetch();
         } catch (error) {
             console.error("Error canceling transaction:", error);
             alert(`Error al cancelar la transacción: ${error.message}`);
@@ -409,45 +409,45 @@ export const ProfilePage = () => {
   const [userData, setUserData] = useState<UserProfileData>(initialUserData);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchProfile = async () => {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+          console.error("User not logged in. Cannot fetch profile.");
+          setIsLoading(false);
+          return;
+      }
+
+      try {
+          const user = JSON.parse(storedUser);
+          const userId = user.id;
+
+          const response = await fetch(`${API_URL}/profile/${userId}`);
+          if (!response.ok) {
+              throw new Error('Failed to fetch profile data');
+          }
+          const data = await response.json();
+
+          setUserData({
+              name: data.username,
+              email: data.email,
+              phone: data.phone || 'No especificado',
+              registrationDate: data.registrationDate,
+              role: data.role,
+              balance: data.balance,
+              status: data.status,
+              profileImageUrl: data.profileImageUrl,
+              referralCode: data.referralCode,
+              transactionsHistory: data.transactionsHistory, // 🔑 Cargando el historial
+          });
+      } catch (error) {
+          console.error("Error fetching profile:", error);
+          setUserData(prev => ({ ...prev, name: 'Error de Conexión', status: 'Inactiva', role: 'Desconocido', referralCode: 'ERROR', transactionsHistory: [] }));
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
   useEffect(() => {
-    const fetchProfile = async () => {
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-            console.error("User not logged in. Cannot fetch profile.");
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            const user = JSON.parse(storedUser);
-            const userId = user.id;
-
-            const response = await fetch(`${API_URL}/profile/${userId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch profile data');
-            }
-            const data = await response.json();
-            
-            setUserData({
-                name: data.username,
-                email: data.email,
-                phone: data.phone || 'No especificado',
-                registrationDate: data.registrationDate,
-                role: data.role,
-                balance: data.balance,
-                status: data.status,
-                profileImageUrl: data.profileImageUrl,
-                referralCode: data.referralCode, 
-                transactionsHistory: data.transactionsHistory, // 🔑 Cargando el historial
-            });
-        } catch (error) {
-            console.error("Error fetching profile:", error);
-            setUserData(prev => ({ ...prev, name: 'Error de Conexión', status: 'Inactiva', role: 'Desconocido', referralCode: 'ERROR', transactionsHistory: [] }));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     fetchProfile();
   }, []);
 
@@ -462,7 +462,7 @@ export const ProfilePage = () => {
         return <ProfileDetails userData={userData} isLoading={false} />; 
       case 'wallet':
         // Pasamos el historial cargado de la DB como prop inicial
-        return <WalletSection userData={userData} initialTransactions={userData.transactionsHistory} />;
+        return <WalletSection userData={userData} initialTransactions={userData.transactionsHistory} refetch={fetchProfile} />;
       default:
         return <ProfileDetails userData={userData} isLoading={false} />;
     }
