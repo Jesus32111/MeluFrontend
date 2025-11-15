@@ -5,7 +5,7 @@ interface SistemaLogueoProps {
   onLoginSuccess: () => void;
 }
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://iridescent-cannoli-857c6f.netlify.app/";
 
 function SistemaLogueo({ onLoginSuccess }: SistemaLogueoProps) {
   const [isRegister, setIsRegister] = useState(false);

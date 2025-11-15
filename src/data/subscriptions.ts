@@ -16,6 +16,16 @@ export interface Category {
   logoUrl: string;
 }
 
+// Nueva interfaz para los datos del carrusel
+export interface CarouselSlide {
+  id: number;
+  url: string;
+  alt: string;
+  platformName: string;
+  logoUrl: string;
+  categoryId: string;
+}
+
 export const categories: Category[] = [
   { id: 'netflix', name: 'Netflix', logoUrl: '/public/icono1.png' },
   { id: 'hbo-max', name: 'HBO Max', logoUrl: '/public/icono2.png' },
@@ -25,6 +35,58 @@ export const categories: Category[] = [
   { id: 'star-plus', name: 'Star+', logoUrl: '/public/icono6.png' },
   { id: 'crunchyroll', name: 'Crunchyroll', logoUrl: '/public/icono7.png' },
   { id: 'apple-tv-plus', name: 'Apple TV+', logoUrl: '/public/icono8.png' },
+];
+
+// Datos del carrusel enriquecidos con logo y categoría para navegación
+export const carouselSlides: CarouselSlide[] = [
+  { 
+    id: 1, 
+    url: '/public/Netflix.mp4', // MODIFICADO: Ahora usa el video
+    alt: 'Preview de Netflix', 
+    platformName: 'Netflix', 
+    logoUrl: '/public/icono1.png', 
+    categoryId: 'netflix' 
+  },
+  { 
+    id: 2, 
+    url: '/public/HBO.avif', 
+    alt: 'Preview de HBO Max', 
+    platformName: 'HBO Max', 
+    logoUrl: '/public/icono2.png', 
+    categoryId: 'hbo-max' 
+  },
+  { 
+    id: 3, 
+    url: '/public/disney.webp', 
+    alt: 'Preview de Disney Plus', 
+    platformName: 'Disney Plus', 
+    logoUrl: '/public/icono4.png', 
+    categoryId: 'disney-plus' 
+  },
+  { 
+    id: 4, 
+    url: '/public/primevideo.png', 
+    alt: 'Setup de Streaming', 
+    platformName: 'Amazon Prime Video', 
+    logoUrl: '/public/icono5.png', 
+    categoryId: 'amazon-prime-video' 
+  },
+  { 
+    id: 5, 
+    url: '/public/star+.avif', 
+    alt: 'Noche de Películas', 
+    platformName: 'Star+', 
+    logoUrl: '/public/icono6.png', 
+    categoryId: 'star-plus' 
+  },
+  { 
+    id: 6, 
+    url: '/public/youtube.png', 
+    alt: 'Cine y Películas', 
+    platformName: 'YouTube Premium', 
+    logoUrl: '/public/icono3.png', 
+    categoryId: 'youtube-premium' 
+  },
 ];
 
 export const subscriptions: Subscription[] = [
@@ -56,8 +118,8 @@ export const subscriptions: Subscription[] = [
     duration: 'Mensual',
     price: 25,
     description: 'Acceso ilimitado a los éxitos de taquilla de Warner Bros, HBO y más.',
-    imageUrl: 'https://images.pexels.com/photos/5662857/pexels-photo-5662857.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
-    logoUrl: '/public/icono2.png',
+    imageUrl: '/public/HBO.avif',
+    logoUrl: '/public/HBO.avif',
     featured: true,
   },
   {

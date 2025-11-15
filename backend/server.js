@@ -9,10 +9,14 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:5174',
-    methods: ['POST', 'GET'], // Permitir GET para el perfil
+    origin: [
+        'http://localhost:5174',                      // desarrollo local
+        'https://iridescent-cannoli-857c6f.netlify.app' // producción en Netlify
+    ],
+    methods: ['POST', 'GET'],
     allowedHeaders: ['Content-Type'],
 }));
+
 app.use(express.json());
 
 // 🔹 Generador de código personal de referido (ABC123)

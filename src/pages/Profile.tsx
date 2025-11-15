@@ -1,8 +1,8 @@
 import { User, DollarSign, Shield, CheckCircle, Calendar, Mail, Phone, LogOut, Wallet, Loader2, Copy } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RechargeModal } from '../components/RechargeModal'; 
 
-const API_URL = "http://localhost:3000";
+const API_URL = "https://iridescent-cannoli-857c6f.netlify.app/";
 
 // --- Tipos de Datos ---
 interface Transaction {
@@ -24,7 +24,7 @@ interface UserProfileData {
   status: string;
   profileImageUrl: string;
   referralCode: string; 
-  transactionsHistory: Transaction[]; // 🔑 Nuevo: Historial cargado de la DB
+  transactionsHistory: Transaction[]; // 🔑 Historial cargado de la DB
 }
 
 
@@ -210,6 +210,8 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
     // Inicializar el historial con los datos cargados de la DB
     const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
     const [userId, setUserId] = useState<string | null>(null);
+    // 🔑 Estado para resaltar la transacción recién creada
+    const [highlightedTxId, setHighlightedTxId] = useState<number | null>(null); 
 
     // Obtener el ID del usuario al montar el componente
     useEffect(() => {
@@ -242,10 +244,11 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
     };
 
     // Lógica para generar una nueva transacción pendiente y GUARDAR EN DB
-    const handleRechargeConfirm = async (amount: number) => {
+    const handleRechargeConfirm = useCallback(async (amount: number) => {
         if (!userId) {
             alert("Error: ID de usuario no encontrado.");
-            return;
+            // Si falla la confirmación temprana, devolvemos 0 o lanzamos un error
+            throw new Error("User ID not found."); 
         }
 
         const newTransaction: Transaction = {
@@ -271,16 +274,22 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
             
             // 2. Actualizar el estado local para visualización inmediata
             setTransactions(prev => [newTransaction, ...prev]);
-            console.log(`Recarga registrada y guardada en DB: $${amount.toFixed(2)}`);
+            
+            // 🔑 3. Resaltar la nueva transacción por 5 segundos
+            setHighlightedTxId(newTransaction.id);
+            setTimeout(() => setHighlightedTxId(null), 5000);
 
+            console.log(`Recarga registrada y guardada en DB: $${amount.toFixed(2)}`);
+            return newTransaction.id; // Devolver el ID de la transacción para el modal
         } catch (error) {
             console.error("Error saving transaction:", error);
             alert(`Error al guardar la transacción: ${error.message}`);
+            throw error; // Re-throw para que el modal maneje el error
         }
-    };
+    }, [userId]);
     
     // Lógica para cancelar una transacción pendiente y GUARDAR EN DB
-    const handleCancelTransaction = async (id: number) => {
+    const handleCancelTransaction = useCallback(async (id: number) => {
         if (!userId) return;
 
         try {
@@ -296,21 +305,18 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                 throw new Error(errorData.message || 'Failed to cancel transaction');
             }
 
-            // 2. Actualizar el estado local
+            // 2. Actualizar el estado local: ELIMINAR la transacción de la lista
+            // Esto cumple con el requisito de que la transacción cancelada no permanezca visible.
             setTransactions(prev => 
-                prev.map(tx => 
-                    tx.id === id && tx.status === 'Pendiente' 
-                        ? { ...tx, status: 'Cancelada' } 
-                        : tx
-                )
+                prev.filter(tx => tx.id !== id)
             );
-            console.log(`Transacción ${id} cancelada y actualizada en DB.`);
+            console.log(`Transacción ${id} cancelada y eliminada de la vista.`);
 
         } catch (error) {
             console.error("Error canceling transaction:", error);
             alert(`Error al cancelar la transacción: ${error.message}`);
         }
-    };
+    }, [userId]);
 
     // Función para determinar el color del estado
     const getStatusClasses = (status: Transaction['status']) => {
@@ -320,6 +326,8 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
             case 'Completada':
                 return 'text-success bg-success/10 border border-success/50';
             case 'Cancelada':
+                // Nota: Si la transacción se elimina, este caso solo se vería si la transacción
+                // fue cargada inicialmente como 'Cancelada' desde la DB.
                 return 'text-error bg-error/10 border border-error/50';
             default:
                 return 'text-textSecondary';
@@ -358,32 +366,38 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/50">
-                            {transactions.map(tx => (
-                                <tr key={tx.id} className="hover:bg-surface/50 transition-colors duration-200">
-                                    <td className="py-4 px-4 whitespace-nowrap text-textSecondary">{tx.date}</td>
-                                    <td className="py-4 px-4 whitespace-nowrap text-text">{tx.description}</td>
-                                    
-                                    {/* Mostrar el estado */}
-                                    <td className="py-4 px-4 whitespace-nowrap text-center">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(tx.status)}`}>
-                                            {tx.status}
-                                        </span>
-                                    </td>
-                                    
-                                    {/* Columna de Acciones */}
-                                    <td className="py-4 px-4 whitespace-nowrap text-right">
-                                        {/* Opción de Cancelar solo si es Pendiente */}
-                                        {tx.status === 'Pendiente' && (
-                                            <button
-                                                onClick={() => handleCancelTransaction(tx.id)}
-                                                className="text-error hover:text-error/70 font-medium transition-colors duration-200 text-sm p-2 rounded-lg hover:bg-error/10"
-                                            >
-                                                Cancelar
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
+                            {transactions.map(tx => {
+                                // 🔑 Lógica para resaltar la fila
+                                const isHighlighted = tx.id === highlightedTxId;
+                                const rowClasses = `transition-all duration-500 ${isHighlighted ? 'bg-primary/30 border-l-4 border-primary/80 shadow-inner' : 'hover:bg-surface/50'}`;
+
+                                return (
+                                    <tr key={tx.id} className={rowClasses}>
+                                        <td className="py-4 px-4 whitespace-nowrap text-textSecondary">{tx.date}</td>
+                                        <td className="py-4 px-4 whitespace-nowrap text-text">{tx.description}</td>
+                                        
+                                        {/* Mostrar el estado */}
+                                        <td className="py-4 px-4 whitespace-nowrap text-center">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusClasses(tx.status)}`}>
+                                                {tx.status}
+                                            </span>
+                                        </td>
+                                        
+                                        {/* Columna de Acciones */}
+                                        <td className="py-4 px-4 whitespace-nowrap text-right">
+                                            {/* Opción de Cancelar solo si es Pendiente */}
+                                            {tx.status === 'Pendiente' && (
+                                                <button
+                                                    onClick={() => handleCancelTransaction(tx.id)}
+                                                    className="text-error hover:text-error/70 font-medium transition-colors duration-200 text-sm p-2 rounded-lg hover:bg-error/10"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -397,6 +411,7 @@ const WalletSection = ({ userData, initialTransactions }: { userData: UserProfil
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onConfirm={handleRechargeConfirm}
+                onCancelTransaction={handleCancelTransaction}
             />
         </div>
     );
