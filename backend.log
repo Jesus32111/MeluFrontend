@@ -1,0 +1,6 @@
+
+> melu-backend@1.0.0 start
+> node server.js
+
+Database initialized: 'users' table ensured.
+Backend Server running on http://localhost:3000
