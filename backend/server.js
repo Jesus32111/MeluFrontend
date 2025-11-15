@@ -267,8 +267,12 @@ app.post('/login', async (req, res) => {
 });
 
 // Inicializar DB y arrancar servidor
-initializeDb().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Backend Server running on http://localhost:${PORT}`);
-    });
-});
+if (process.env.NODE_ENV !== 'test') {
+  initializeDb().then(() => {
+      app.listen(PORT, () => {
+          console.log(`Backend Server running on http://localhost:${PORT}`);
+      });
+  });
+}
+
+export default app;
