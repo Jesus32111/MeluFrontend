@@ -1,0 +1,16 @@
+/* 
+ * CLAVE: Corrección para el fondo negro en videos con transparencia (canal alfa) en navegadores móviles (iOS/Android).
+ * Esto fuerza la aceleración por hardware y asegura que el fondo del elemento video sea transparente.
+ */
+.video-transparent-fix {
+  /* Asegura que el elemento video no tenga un fondo opaco */
+  background-color: transparent !important;
+  
+  /* Fuerza la aceleración por hardware para mejorar el manejo de capas */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  
+  /* Propiedad experimental que a veces ayuda con la transparencia */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}

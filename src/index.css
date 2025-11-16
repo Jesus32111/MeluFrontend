@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-background text-text antialiased;
+}
+
+/* Custom background image */
+.bg-streaming-background {
+    background-image: url('/fondo.jpg');
+}
+
+/* Neon border effect */
+.neon-border {
+  border: 2px solid theme('colors.primary'); /* Borde base */
+  box-shadow:
+    0 0 5px theme('colors.primary'), /* Brillo interior sutil */
+    0 0 15px theme('colors.accent'); /* Brillo exterior sutil */
+  transition: all 0.3s ease-in-out; /* Transición suave para el hover */
+}
+
+.neon-border:hover {
+  box-shadow:
+    0 0 5px theme('colors.primary'),
+    0 0 12px theme('colors.primary'),
+    0 0 20px theme('colors.accent'),
+    0 0 30px theme('colors.accent');
+}
+
+/* --- Scrollbar Moderna (Webkit) --- */
+.scrollbar-modern::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-track {
+  background: theme('colors.surface');
+  border-radius: 10px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb {
+  background: theme('colors.primary');
+  border-radius: 10px;
+  border: 2px solid theme('colors.surface'); /* Efecto de padding */
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.primary/80');
+}
+/* ----------------------------------- */
+
+/* --- Estilo Futurista: Neon Glow para Texto --- */
+.text-neon-glow {
+  /* Sombra de texto que simula un brillo de neón */
+  text-shadow:
+    0 0 4px theme('colors.primary/80'),
+    0 0 8px theme('colors.primary/60'),
+    0 0 12px theme('colors.accent/40');
+  transition: text-shadow 0.3s ease-in-out;
+}
+/* --------------------------------------------- */
+
+/* Keyframe animations are now defined in tailwind.config.js */
+/* The classes animate-fadeIn, animate-slideInLeft, animate-slideInRight will use those definitions */
